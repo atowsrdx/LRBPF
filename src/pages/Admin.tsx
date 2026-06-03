@@ -17,7 +17,7 @@ export default function Admin() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const securePassword = import.meta.env.VITE_ADMIN_PASSWORD || 'secureAdmin!2026';
+    const securePassword = (import.meta as any).env?.VITE_ADMIN_PASSWORD || 'secureAdmin!2026';
     if (password === securePassword) {
       setIsAuthenticated(true);
       sessionStorage.setItem('admin_auth', 'true');
