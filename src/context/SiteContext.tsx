@@ -1,42 +1,57 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { SiteContent, defaultSiteContent } from '../types';
+import { db, handleFirestoreError, OperationType } from '../firebase';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 
 interface SiteContextType {
   content: SiteContent;
-  updateContent: (newContent: SiteContent) => void;
+  updateContent: (newContent: SiteContent) => Promise<void>;
+  isLoading: boolean;
 }
 
 const SiteContext = createContext<SiteContextType | undefined>(undefined);
 
 export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [content, setContent] = useState<SiteContent>(() => {
-    const saved = localStorage.getItem('lrbpf_content');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return {
-          ...defaultSiteContent,
-          ...parsed,
-          stories: parsed.stories || defaultSiteContent.stories,
-          process: parsed.process || defaultSiteContent.process,
-        };
-      } catch (e) {
-        return defaultSiteContent;
-      }
-    }
-    return defaultSiteContent;
-  });
+  const [content, setContent] = useState<SiteContent>(defaultSiteContent);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem('lrbpf_content', JSON.stringify(content));
-  }, [content]);
+    const configPath = 'siteConfig/main';
+    const configDoc = doc(db, configPath);
+    
+    const unsubscribe = onSnapshot(configDoc, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setContent({
+          ...defaultSiteContent,
+          ...data,
+          stories: data.stories || defaultSiteContent.stories,
+          process: data.process || defaultSiteContent.process,
+        } as SiteContent);
+      } else {
+        // Document does not exist yet. Using defaults.
+        setContent(defaultSiteContent);
+      }
+      setIsLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, configPath);
+      setIsLoading(false);
+    });
 
-  const updateContent = (newContent: SiteContent) => {
-    setContent(newContent);
+    return () => unsubscribe();
+  }, []);
+
+  const updateContent = async (newContent: SiteContent) => {
+    const configPath = 'siteConfig/main';
+    try {
+      await setDoc(doc(db, configPath), newContent);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, configPath);
+    }
   };
 
   return (
-    <SiteContext.Provider value={{ content, updateContent }}>
+    <SiteContext.Provider value={{ content, updateContent, isLoading }}>
       {children}
     </SiteContext.Provider>
   );

@@ -5,7 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    base: '/LRBPF/', // Specific repository name for GitHub Pages deployed at <user>.github.io/LRBPF/
+    base: './', // Use relative paths for assets, works for any GitHub Pages repository name
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

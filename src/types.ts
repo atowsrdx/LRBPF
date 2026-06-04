@@ -15,6 +15,18 @@ export interface StoryContent {
   imageUrl?: string;
 }
 
+export interface Application {
+  id?: string;
+  name: string;
+  email: string;
+  phone: string;
+  loanType: string;
+  loanAmount: string;
+  hardshipReason: string;
+  status: 'pending' | 'reviewing' | 'approved' | 'rejected';
+  createdAt: number;
+}
+
 export interface SiteContent {
   brand: {
     name: string;
@@ -52,6 +64,10 @@ export interface SiteContent {
     description: string;
   };
   process: ProcessStep[];
+  applicationSection: {
+    title: string;
+    description: string;
+  };
   storiesSection: {
     title: string;
     description: string;
@@ -81,7 +97,7 @@ export const defaultSiteContent: SiteContent = {
     headlinePart1: "Break Free From EMI Burdens",
     headlinePart2: "With Public Support",
     description: "Loan Repayment By Public Fund (LRBPF) crowdsources donations to help people trapped in financial emergencies. Total transparency directly to the public.",
-    donateButtonText: "Fund Someone Today",
+    donateButtonText: "Donate via Cosmofeed",
     proofButtonText: "See Proof on Instagram",
   },
   statsSection: {
@@ -112,30 +128,19 @@ export const defaultSiteContent: SiteContent = {
     },
     {
       id: "3",
-      title: "3. Harassment Check",
-      description: "We record evidence of recovery agent harassment and coordinate with the borrower to issue formal notices."
+      title: "3. Harassment Check & Review",
+      description: "We record evidence of recovery agent harassment and our volunteer council analyzes the financial viability to ensure our intervention resolves the hardship completely."
     },
     {
       id: "4",
-      title: "4. Case Review Council",
-      description: "Our volunteer council analyzes the financial viability to ensure our intervention resolves the hardship completely."
-    },
-    {
-      id: "5",
-      title: "5. Negotiated Settlement",
-      description: "We communicate directly with the lender to waive penalty charges and negotiate a complete settlement."
-    },
-    {
-      id: "6",
-      title: "6. Direct Payment",
-      description: "Funds crowd-sourced from the public are disbursed directly into the loan account. Cash is strictly never handed out."
-    },
-    {
-      id: "7",
-      title: "7. Public Proof & Documentation",
-      description: "All bank receipts, NOCs, and anonymized verification chats are posted onto our Instagram as public transparent proof."
+      title: "4. Direct Payment & Proof",
+      description: "Funds crowd-sourced from the public are disbursed directly into the loan account, and all receipts are posted onto our Instagram as public transparent proof."
     }
   ],
+  applicationSection: {
+    title: "Apply for Help",
+    description: "If you are trapped in an EMI cycle and facing severe recovery agent harassment, you can apply for verification by the council. Please read the guidelines carefully.",
+  },
   storiesSection: {
     title: "Proof on Instagram",
     description: "We document the stories that matter. Watch the real conversations, view the EMI receipts, and see whose life the fund changed."

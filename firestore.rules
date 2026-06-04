@@ -1,0 +1,36 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isConfigAdmin() {
+      // Allow only the specific admin email to write the config.
+      // Adjust the email below.
+      return isAuthenticated() && request.auth.token.email_verified == true && request.auth.token.email == 'sugatamitra534@gmail.com';
+    }
+
+    // SiteContent Entity
+    match /siteConfig/{documentId} {
+      // Anyone can read the config
+      allow read: if true;
+
+      // Only the admin can create/update the config
+      allow write: if isConfigAdmin();
+    }
+
+    // Applications Entity
+    match /applications/{documentId} {
+      allow create: if true;
+      allow read, update, delete: if isConfigAdmin();
+    }
+  }
+}
+

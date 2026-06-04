@@ -1,0 +1,29 @@
+{
+  "entities": {
+    "SiteContent": {
+      "title": "SiteContent",
+      "description": "The complete configuration and content mapping for the website UI.",
+      "type": "object",
+      "properties": {
+        "brand": { "type": "object" },
+        "seo": { "type": "object" },
+        "general": { "type": "object" },
+        "hero": { "type": "object" },
+        "statsSection": { "type": "object" },
+        "stats": { "type": "object" },
+        "processSection": { "type": "object" },
+        "process": { "type": "array" },
+        "storiesSection": { "type": "object" },
+        "stories": { "type": "array" },
+        "footer": { "type": "object" }
+      },
+      "required": ["brand", "seo", "general", "hero", "process", "stories"]
+    }
+  },
+  "firestore": {
+    "siteConfig/main": {
+      "schema": "SiteContent",
+      "description": "The main configuration document for the site."
+    }
+  }
+}

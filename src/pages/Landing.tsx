@@ -4,6 +4,8 @@ import Hero from '../components/Hero';
 import Dashboard from '../components/Dashboard';
 import Process from '../components/Process';
 import Stories from '../components/Stories';
+import ApplicationForm from '../components/ApplicationForm';
+import Contact from '../components/Contact';
 import Footer from '../components/Footer';
 import { useSiteContent } from '../context/SiteContext';
 
@@ -31,6 +33,8 @@ export default function Landing() {
         <Dashboard />
         <Process />
         <Stories />
+        <ApplicationForm />
+        <Contact />
       </main>
       <Footer />
     </div>

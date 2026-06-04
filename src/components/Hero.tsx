@@ -7,7 +7,7 @@ export default function Hero() {
   const { content } = useSiteContent();
 
   const handleDonateClick = () => {
-    toast.success('Redirecting to secure payment gateway...', {
+    toast.success('Redirecting to Cosmofeed payment gateway...', {
       icon: '🔒',
       style: {
         borderRadius: '10px',

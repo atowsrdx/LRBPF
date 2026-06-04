@@ -1,31 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSiteContent } from '../context/SiteContext';
 import { motion } from 'motion/react';
-import { Save, ExternalLink, Plus, Trash2, Lock, ArrowRight, Image as ImageIcon } from 'lucide-react';
+import { Save, ExternalLink, Plus, Trash2, Lock, ArrowRight, Image as ImageIcon, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ProcessStep, StoryContent } from '../types';
 import toast from 'react-hot-toast';
+import { auth, loginWithGoogle, logout } from '../firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 export default function Admin() {
   const { content, updateContent } = useSiteContent();
   const [formData, setFormData] = useState(content);
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return sessionStorage.getItem('admin_auth') === 'true';
-  });
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
 
-  const handleLogin = (e: React.FormEvent) => {
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setIsAuthChecking(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    // When content changes from Firebase, update the form data
+    setFormData(content);
+  }, [content]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const securePassword = (import.meta as any).env?.VITE_ADMIN_PASSWORD || 'secureAdmin!2026';
-    if (password === securePassword) {
-      setIsAuthenticated(true);
-      sessionStorage.setItem('admin_auth', 'true');
-      setError('');
+    try {
+      await loginWithGoogle();
       toast.success('Logged in successfully!');
-    } else {
-      setError('Incorrect password.');
-      toast.error('Incorrect password');
+    } catch (error: any) {
+      toast.error('Login failed ' + error.message);
     }
   };
 
@@ -99,24 +107,35 @@ export default function Admin() {
     }));
   };
 
-  const handleSave = () => {
-    updateContent(formData);
-    toast.success('Changes published successfully!', {
-      style: {
-        borderRadius: '10px',
-        background: '#333',
-        color: '#fff',
-      },
-    });
+  const handleSave = async () => {
+    try {
+      await updateContent(formData);
+      toast.success('Changes published successfully!', {
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+      });
+    } catch (error: any) {
+      toast.error('Failed to publish changes: ' + error.message);
+    }
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    sessionStorage.removeItem('admin_auth');
+  const handleLogout = async () => {
+    await logout();
     toast('Logged out', { icon: '👋' });
   };
 
-  if (!isAuthenticated) {
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center items-center p-4 transition-colors">
+        <p className="text-slate-500">Checking auth state...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center items-center p-4 transition-colors">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-3xl shadow-xl max-w-md w-full">
@@ -124,21 +143,11 @@ export default function Admin() {
             <Lock className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white text-center mb-2">Admin Access</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-center mb-8">Enter your credentials to manage the platform.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-center mb-8">Sign in with an authorized Google account to manage the platform.</p>
           
           <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <input
-                type="password"
-                placeholder="Enter secure password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all dark:text-white text-center tracking-widest text-lg"
-              />
-              {error && <p className="text-red-500 dark:text-red-400 text-sm mt-2 text-center">{error}</p>}
-            </div>
             <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2">
-              Login to Admin <ArrowRight className="h-5 w-5" />
+              Login with Google <ArrowRight className="h-5 w-5" />
             </button>
           </form>
           <div className="mt-6 text-center">
@@ -159,13 +168,16 @@ export default function Admin() {
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Admin Dashboard</h1>
             <p className="mt-2 text-slate-600 dark:text-slate-400">Update landing page content, links, and stories</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <Link to="/admin/applications" className="inline-flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 px-4 py-2 rounded-lg text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 font-medium shadow-sm transition-all">
+              <FileText className="h-4 w-4" /> View Applications
+            </Link>
+            <Link to="/" className="inline-flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 font-medium shadow-sm transition-all">
+              View Live Site <ExternalLink className="h-4 w-4" />
+            </Link>
             <button onClick={handleLogout} className="text-sm font-medium text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors">
               Logout
             </button>
-            <Link to="/" className="inline-flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-lg text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400 font-medium shadow-sm transition-all">
-              View Live Site <ExternalLink className="h-4 w-4" />
-            </Link>
           </div>
         </div>
 
@@ -234,7 +246,7 @@ export default function Admin() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Donate Fund Link</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Cosmofeed Payment Link</label>
                 <input
                   type="text"
                   value={formData.general.donateLink}
@@ -461,6 +473,38 @@ export default function Admin() {
                   <p className="text-slate-500 dark:text-slate-400">No verification steps defined.</p>
                 </div>
               )}
+            </div>
+          </motion.section>
+
+          {/* Application Form Section Details */}
+          <motion.section 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+            className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800"
+          >
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Apply Form Section</h2>
+            <div className="space-y-6">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div>
+                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Section Heading Name</label>
+                   <input
+                     type="text"
+                     value={formData.applicationSection?.title || ''}
+                     onChange={(e) => handleChange('applicationSection', 'title', e.target.value)}
+                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all dark:text-white"
+                   />
+                 </div>
+                 <div>
+                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Section Subtitle Description</label>
+                   <input
+                     type="text"
+                     value={formData.applicationSection?.description || ''}
+                     onChange={(e) => handleChange('applicationSection', 'description', e.target.value)}
+                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all dark:text-white"
+                   />
+                 </div>
+              </div>
             </div>
           </motion.section>
 
