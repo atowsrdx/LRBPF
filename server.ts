@@ -30,6 +30,9 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // Trust proxy for rate limiting behind reverse proxy
+  app.set('trust proxy', 1);
+
   app.use(express.json({ limit: '10mb' }));
   app.use(cookieParser());
 
@@ -38,8 +41,17 @@ async function startServer() {
     const { password } = req.body;
     let correctPassword = 'admin123';
     
+    try {
+      const adminDoc = await getDoc(doc(db, 'adminConfig', 'auth'));
+      if (adminDoc.exists()) {
+        correctPassword = adminDoc.data()?.password || correctPassword;
+      }
+    } catch(err) {
+      console.error(err);
+    }
+    
     if (password === correctPassword) {
-      // Create JWT token
+      // Reset rate limit could be done properly, but for now successful login is allowed
       const token = jwt.sign({ admin: true }, JWT_SECRET, { expiresIn: '12h' });
       
       // Store in HttpOnly cookie to protect against XSS
@@ -81,7 +93,7 @@ async function startServer() {
     }
     
     try {
-      await db.collection('adminConfig').doc('auth').set({ password: newPassword }, { merge: true });
+      await setDoc(doc(db, 'adminConfig', 'auth'), { password: newPassword }, { merge: true });
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
