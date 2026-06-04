@@ -9,14 +9,16 @@ service cloud.firestore {
 
     // SiteContent Entity
     match /siteConfig/{documentId} {
+      // Anyone can read the config. Only the custom backend can write.
       allow read: if true;
-      allow write: if true; // Temporarily open due to auth issues
+      allow write: if false; 
     }
 
     // Applications Entity
     match /applications/{documentId} {
       allow create: if true;
-      allow read, update, delete: if true; // Temporarily open due to auth issues
+      // Normal clients cannot read or modify applications. Only the custom backend can.
+      allow read, update, delete: if false;
     }
   }
 }

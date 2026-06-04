@@ -44,9 +44,17 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateContent = async (newContent: SiteContent) => {
     const configPath = 'siteConfig/main';
     try {
-      await setDoc(doc(db, configPath), newContent);
+      const response = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newContent)
+      });
+      if (!response.ok) {
+        throw new Error('Failed to save config: Unauthorized or server error');
+      }
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, configPath);
+      console.error(error);
+      throw error;
     }
   };
 

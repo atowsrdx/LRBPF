@@ -26,31 +26,39 @@ export default function AdminApplications() {
   useEffect(() => {
     if (!user) return;
     
-    const q = query(
-      collection(db, 'applications'),
-      orderBy('createdAt', 'desc')
-    );
+    const fetchApps = async () => {
+      try {
+        const response = await fetch('/api/applications');
+        if (response.ok) {
+          const apps = await response.json();
+          setApplications(apps);
+        } else {
+          toast.error('Failed to load applications. Make sure you are authenticated.');
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
     
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const apps = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Application[];
-      setApplications(apps);
-    }, (error) => {
-      console.error(error);
-      toast.error('Failed to load applications.');
-    });
-
-    return () => unsubscribe();
+    fetchApps();
+    // Optional: poll every 10 seconds for updates
+    const interval = setInterval(fetchApps, 10000);
+    return () => clearInterval(interval);
   }, [user]);
 
   const handleStatusChange = async (id: string, newStatus: Application['status']) => {
     try {
-      await updateDoc(doc(db, 'applications', id), {
-        status: newStatus
+      const response = await fetch(`/api/applications/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
       });
-      toast.success(`Application marked as ${newStatus}`);
+      if (response.ok) {
+        toast.success(`Application marked as ${newStatus}`);
+        setApplications(apps => apps.map(app => app.id === id ? { ...app, status: newStatus } : app));
+      } else {
+        throw new Error('Update failed');
+      }
     } catch (error: any) {
       toast.error('Update failed: ' + error.message);
     }
@@ -59,14 +67,22 @@ export default function AdminApplications() {
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this application?')) return;
     try {
-      await deleteDoc(doc(db, 'applications', id));
-      toast.success('Application deleted');
+      const response = await fetch(`/api/applications/${id}`, {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        toast.success('Application deleted');
+        setApplications(apps => apps.filter(app => app.id !== id));
+      } else {
+        throw new Error('Delete failed');
+      }
     } catch (error: any) {
       toast.error('Delete failed: ' + error.message);
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await fetch('/api/logout', { method: 'POST' });
     sessionStorage.removeItem('adminAuth');
     setUser(null);
     toast('Logged out', { icon: '👋' });
@@ -74,13 +90,22 @@ export default function AdminApplications() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const correctPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
-    if (password === correctPassword) {
-      sessionStorage.setItem('adminAuth', 'true');
-      setUser({} as User);
-      toast.success('Logged in successfully!');
-    } else {
-      toast.error('Invalid password');
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      if (response.ok) {
+        sessionStorage.setItem('adminAuth', 'true');
+        setUser({} as User);
+        toast.success('Logged in successfully!');
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Invalid password');
+      }
+    } catch (error) {
+      toast.error('Network error during login');
     }
   };
 

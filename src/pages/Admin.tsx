@@ -15,6 +15,7 @@ export default function Admin() {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
 
   useEffect(() => {
     // Check if simple session storage auth is set instead of Firebase auth
@@ -31,13 +32,23 @@ export default function Admin() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const correctPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
-    if (password === correctPassword) {
-      sessionStorage.setItem('adminAuth', 'true');
-      setUser({} as User);
-      toast.success('Logged in successfully!');
-    } else {
-      toast.error('Invalid password');
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      
+      if (response.ok) {
+        sessionStorage.setItem('adminAuth', 'true');
+        setUser({} as User);
+        toast.success('Logged in successfully!');
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Invalid password');
+      }
+    } catch (error) {
+      toast.error('Network error during login');
     }
   };
 
@@ -127,9 +138,35 @@ export default function Admin() {
   };
 
   const handleLogout = async () => {
+    await fetch('/api/logout', { method: 'POST' });
     sessionStorage.removeItem('adminAuth');
     setUser(null);
     toast('Logged out', { icon: '👋' });
+  };
+
+  const handleChangePassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword })
+      });
+      
+      if (response.ok) {
+        toast.success('Password updated successfully');
+        setNewPassword('');
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Failed to update password');
+      }
+    } catch (error) {
+      toast.error('Network error during password change');
+    }
   };
 
   if (isAuthChecking) {
@@ -201,6 +238,34 @@ export default function Admin() {
           animate={{ opacity: 1 }}
           className="space-y-8 pb-32"
         >
+          {/* Security Settings */}
+          <motion.section 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800"
+          >
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Security Settings</h2>
+            <div className="space-y-4 max-w-sm">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">New Admin Password</label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password (min 6 chars)"
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all dark:text-white"
+                  />
+                </div>
+                <button
+                  onClick={handleChangePassword}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2"
+                >
+                  <Lock className="h-4 w-4"/> Update Password
+                </button>
+            </div>
+          </motion.section>
+
           {/* Brand & SEO */}
           <motion.section 
             initial={{ opacity: 0, y: 20 }}
