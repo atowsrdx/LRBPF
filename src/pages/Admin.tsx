@@ -5,13 +5,11 @@ import { Save, ExternalLink, Plus, Trash2, Lock, ArrowRight, Image as ImageIcon,
 import { Link } from 'react-router-dom';
 import { ProcessStep, StoryContent } from '../types';
 import toast from 'react-hot-toast';
-import { auth, loginWithGoogle, logout } from '../firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
 
 export default function Admin() {
   const { content, updateContent } = useSiteContent();
   const [formData, setFormData] = useState(content);
-  const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   const [password, setPassword] = useState('');
@@ -19,13 +17,13 @@ export default function Admin() {
   useEffect(() => {
     // Check if simple session storage auth is set instead of Firebase auth
     if (sessionStorage.getItem('adminAuth') === 'true') {
-      setUser({} as User); // Mock user
+      setIsAuthenticated(true);
     }
     setIsAuthChecking(false);
   }, []);
 
   useEffect(() => {
-    // When content changes from Firebase, update the form data
+    // When content changes, update the form data
     setFormData(content);
   }, [content]);
 
@@ -40,7 +38,7 @@ export default function Admin() {
       
       if (response.ok) {
         sessionStorage.setItem('adminAuth', 'true');
-        setUser({} as User);
+        setIsAuthenticated(true);
         toast.success('Logged in successfully!');
       } else {
         const errorData = await response.json();
@@ -139,7 +137,7 @@ export default function Admin() {
   const handleLogout = async () => {
     await fetch('/api/logout', { method: 'POST' });
     sessionStorage.removeItem('adminAuth');
-    setUser(null);
+    setIsAuthenticated(false);
     toast('Logged out', { icon: '👋' });
   };
 
@@ -151,7 +149,7 @@ export default function Admin() {
     );
   }
 
-  if (!user) {
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center items-center p-4 transition-colors">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-3xl shadow-xl max-w-md w-full">

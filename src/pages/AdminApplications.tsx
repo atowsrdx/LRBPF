@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { db, auth, loginWithGoogle, logout } from '../firebase';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { onAuthStateChanged, User } from 'firebase/auth';
 import { Link } from 'react-router-dom';
 import { Application } from '../types';
 import toast from 'react-hot-toast';
@@ -10,7 +7,7 @@ import { ArrowLeft, Lock, ArrowRight, User as UserIcon, Phone, FileText, CheckCi
 
 export default function AdminApplications() {
   const [applications, setApplications] = useState<Application[]>([]);
-  const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   const [password, setPassword] = useState('');
@@ -18,13 +15,13 @@ export default function AdminApplications() {
   useEffect(() => {
     // Check if simple session storage auth is set instead of Firebase auth
     if (sessionStorage.getItem('adminAuth') === 'true') {
-      setUser({} as User); // Mock user
+      setIsAuthenticated(true);
     }
     setIsAuthChecking(false);
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!isAuthenticated) return;
     
     const fetchApps = async () => {
       try {
@@ -44,7 +41,7 @@ export default function AdminApplications() {
     // Optional: poll every 10 seconds for updates
     const interval = setInterval(fetchApps, 10000);
     return () => clearInterval(interval);
-  }, [user]);
+  }, [isAuthenticated]);
 
   const handleStatusChange = async (id: string, newStatus: Application['status']) => {
     try {
@@ -84,7 +81,7 @@ export default function AdminApplications() {
   const handleLogout = async () => {
     await fetch('/api/logout', { method: 'POST' });
     sessionStorage.removeItem('adminAuth');
-    setUser(null);
+    setIsAuthenticated(false);
     toast('Logged out', { icon: '👋' });
   };
 
@@ -98,7 +95,7 @@ export default function AdminApplications() {
       });
       if (response.ok) {
         sessionStorage.setItem('adminAuth', 'true');
-        setUser({} as User);
+        setIsAuthenticated(true);
         toast.success('Logged in successfully!');
       } else {
         const errorData = await response.json();
@@ -117,7 +114,7 @@ export default function AdminApplications() {
     );
   }
 
-  if (!user) {
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center items-center p-4 transition-colors">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-3xl shadow-xl max-w-md w-full">

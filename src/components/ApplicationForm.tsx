@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { FileText, Send, AlertCircle } from 'lucide-react';
 import { useSiteContent } from '../context/SiteContext';
-import { db, handleFirestoreError, OperationType } from '../firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
 export default function ApplicationForm() {
@@ -23,11 +21,13 @@ export default function ApplicationForm() {
     setIsSubmitting(true);
     
     try {
-      await addDoc(collection(db, 'applications'), {
-        ...formData,
-        status: 'pending',
-        createdAt: Date.now()
+      const res = await fetch('/api/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
       });
+      if (!res.ok) throw new Error('Submission failed');
+      
       toast.success('Your application has been submitted successfully.');
       setFormData({
         name: '',

@@ -1,7 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { SiteContent, defaultSiteContent } from '../types';
-import { db, handleFirestoreError, OperationType } from '../firebase';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 
 interface SiteContextType {
   content: SiteContent;
@@ -16,33 +14,29 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const configPath = 'siteConfig/main';
-    const configDoc = doc(db, configPath);
-    
-    const unsubscribe = onSnapshot(configDoc, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        setContent({
-          ...defaultSiteContent,
-          ...data,
-          stories: data.stories || defaultSiteContent.stories,
-          process: data.process || defaultSiteContent.process,
-        } as SiteContent);
-      } else {
-        // Document does not exist yet. Using defaults.
+    fetch('/api/config')
+      .then(res => res.json())
+      .then(data => {
+        if (Object.keys(data).length > 0) {
+          setContent({
+            ...defaultSiteContent,
+            ...data,
+            stories: data.stories || defaultSiteContent.stories,
+            process: data.process || defaultSiteContent.process,
+          } as SiteContent);
+        } else {
+          setContent(defaultSiteContent);
+        }
+        setIsLoading(false);
+      })
+      .catch(error => {
+        console.error("Failed to fetch initial config", error);
         setContent(defaultSiteContent);
-      }
-      setIsLoading(false);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, configPath);
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
+        setIsLoading(false);
+      });
   }, []);
 
   const updateContent = async (newContent: SiteContent) => {
-    const configPath = 'siteConfig/main';
     try {
       const response = await fetch('/api/config', {
         method: 'POST',
@@ -52,6 +46,7 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!response.ok) {
         throw new Error('Failed to save config: Unauthorized or server error');
       }
+      setContent(newContent);
     } catch (error) {
       console.error(error);
       throw error;
