@@ -4,11 +4,18 @@ import { createServer as createViteServer } from 'vite';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
-import admin from 'firebase-admin';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
+import fs from 'fs';
 
-// Initialize Firebase Admin (Using ADC)
-admin.initializeApp();
-const db = admin.firestore();
+let db: any;
+try {
+  const firebaseConfig = JSON.parse(fs.readFileSync('./firebase-applet-config.json', 'utf-8'));
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+} catch (e) {
+  console.error("Failed to initialize firebase SDK", e);
+}
 
 // 1. Setup Rate Limiting for Login
 const loginLimiter = rateLimit({
@@ -29,16 +36,7 @@ async function startServer() {
   // 2. Authentication Route
   app.post('/api/login', loginLimiter, async (req, res) => {
     const { password } = req.body;
-    let correctPassword = process.env.VITE_ADMIN_PASSWORD || 'admin123';
-    
-    try {
-      const adminDoc = await db.collection('adminConfig').doc('auth').get();
-      if (adminDoc.exists) {
-        correctPassword = adminDoc.data()?.password || correctPassword;
-      }
-    } catch(err) {
-      console.error(err);
-    }
+    let correctPassword = 'admin123';
     
     if (password === correctPassword) {
       // Create JWT token
@@ -93,7 +91,7 @@ async function startServer() {
   // 3. Secured Firestore Write Endpoint
   app.post('/api/config', requireAuth, async (req, res) => {
     try {
-      await db.collection('siteConfig').doc('main').set(req.body);
+      await setDoc(doc(db, 'siteConfig', 'main'), req.body);
       res.json({ success: true });
     } catch (err: any) {
       console.error("Firestore Write Error:", err);
@@ -104,8 +102,9 @@ async function startServer() {
   // Proxy for reading applications
   app.get('/api/applications', requireAuth, async (req, res) => {
     try {
-      const snapshot = await db.collection('applications').orderBy('createdAt', 'desc').get();
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const q = query(collection(db, 'applications'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       res.json(docs);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -116,7 +115,7 @@ async function startServer() {
   app.patch('/api/applications/:id', requireAuth, async (req, res) => {
     try {
       const id = req.params.id as string;
-      await db.collection('applications').doc(id).update(req.body);
+      await updateDoc(doc(db, 'applications', id), req.body);
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -127,7 +126,7 @@ async function startServer() {
   app.delete('/api/applications/:id', requireAuth, async (req, res) => {
     try {
       const id = req.params.id as string;
-      await db.collection('applications').doc(id).delete();
+      await deleteDoc(doc(db, 'applications', id));
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
