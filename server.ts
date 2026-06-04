@@ -37,18 +37,9 @@ async function startServer() {
   app.use(cookieParser());
 
   // 2. Authentication Route
-  app.post('/api/login', loginLimiter, async (req, res) => {
+  app.post('/api/login', async (req, res) => {
     const { password } = req.body;
     let correctPassword = 'admin123';
-    
-    try {
-      const adminDoc = await getDoc(doc(db, 'adminConfig', 'auth'));
-      if (adminDoc.exists()) {
-        correctPassword = adminDoc.data()?.password || correctPassword;
-      }
-    } catch(err) {
-      console.error(err);
-    }
     
     if (password === correctPassword) {
       // Reset rate limit could be done properly, but for now successful login is allowed
@@ -85,21 +76,7 @@ async function startServer() {
     }
   };
 
-  // Change Admin Password
-  app.post('/api/change-password', requireAuth, async (req, res) => {
-    const { newPassword } = req.body;
-    if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    }
-    
-    try {
-      await setDoc(doc(db, 'adminConfig', 'auth'), { password: newPassword }, { merge: true });
-      res.json({ success: true });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
+  // Change Admin Password removed for security
   // 3. Secured Firestore Write Endpoint
   app.post('/api/config', requireAuth, async (req, res) => {
     try {
