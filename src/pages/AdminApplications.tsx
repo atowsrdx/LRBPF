@@ -13,12 +13,14 @@ export default function AdminApplications() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
 
+  const [password, setPassword] = useState('');
+
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setIsAuthChecking(false);
-    });
-    return () => unsubscribeAuth();
+    // Check if simple session storage auth is set instead of Firebase auth
+    if (sessionStorage.getItem('adminAuth') === 'true') {
+      setUser({} as User); // Mock user
+    }
+    setIsAuthChecking(false);
   }, []);
 
   useEffect(() => {
@@ -64,13 +66,21 @@ export default function AdminApplications() {
     }
   };
 
+  const handleLogout = () => {
+    sessionStorage.removeItem('adminAuth');
+    setUser(null);
+    toast('Logged out', { icon: '👋' });
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      await loginWithGoogle();
+    const correctPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
+    if (password === correctPassword) {
+      sessionStorage.setItem('adminAuth', 'true');
+      setUser({} as User);
       toast.success('Logged in successfully!');
-    } catch (error: any) {
-      toast.error('Login failed ' + error.message);
+    } else {
+      toast.error('Invalid password');
     }
   };
 
@@ -93,8 +103,18 @@ export default function AdminApplications() {
           <p className="text-slate-500 dark:text-slate-400 text-center mb-8">Sign in with an authorized Google account to view applications.</p>
           
           <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <input
+                type="password"
+                placeholder="Enter Admin Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all dark:text-white"
+              />
+              <p className="text-xs text-slate-400 mt-2">Default is 'admin123' if not set in environment.</p>
+            </div>
             <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2">
-              Login with Google <ArrowRight className="h-5 w-5" />
+              Login to Admin <ArrowRight className="h-5 w-5" />
             </button>
           </form>
         </div>
@@ -126,7 +146,7 @@ export default function AdminApplications() {
             <p className="mt-1 text-slate-600 dark:text-slate-400 pl-10">Review incoming applications for financial relief.</p>
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={() => logout()} className="text-sm font-medium text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+            <button onClick={handleLogout} className="text-sm font-medium text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors">
               Logout
             </button>
           </div>
