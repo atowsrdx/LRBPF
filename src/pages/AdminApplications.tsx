@@ -62,7 +62,7 @@ export default function AdminApplications() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const correctPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
+    const correctPassword = localStorage.getItem('adminPassword') || import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
     if (password === correctPassword) {
       sessionStorage.setItem('adminAuth', 'true');
       setIsAuthenticated(true);
