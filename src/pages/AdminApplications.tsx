@@ -23,86 +23,52 @@ export default function AdminApplications() {
   useEffect(() => {
     if (!isAuthenticated) return;
     
-    const fetchApps = async () => {
-      try {
-        const response = await fetch('/api/applications');
-        if (response.ok) {
-          const apps = await response.json();
-          setApplications(apps);
-        } else {
-          toast.error('Failed to load applications. Make sure you are authenticated.');
-        }
-      } catch (error) {
-        console.error(error);
+    const fetchApps = () => {
+      const stored = localStorage.getItem('applications');
+      if (stored) {
+        const apps = JSON.parse(stored);
+        setApplications(apps.sort((a: any, b: any) => b.createdAt - a.createdAt));
       }
     };
     
     fetchApps();
-    // Optional: poll every 10 seconds for updates
+    // poll every 10 seconds for updates within the browser localstorage
     const interval = setInterval(fetchApps, 10000);
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
-  const handleStatusChange = async (id: string, newStatus: Application['status']) => {
-    try {
-      const response = await fetch(`/api/applications/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
-      });
-      if (response.ok) {
-        toast.success(`Application marked as ${newStatus}`);
-        setApplications(apps => apps.map(app => app.id === id ? { ...app, status: newStatus } : app));
-      } else {
-        throw new Error('Update failed');
-      }
-    } catch (error: any) {
-      toast.error('Update failed: ' + error.message);
-    }
+  const handleStatusChange = (id: string, newStatus: Application['status']) => {
+    const stored = JSON.parse(localStorage.getItem('applications') || '[]');
+    const updated = stored.map((app: any) => app.id === id ? { ...app, status: newStatus } : app);
+    localStorage.setItem('applications', JSON.stringify(updated));
+    setApplications(updated.sort((a: any, b: any) => b.createdAt - a.createdAt));
+    toast.success(`Application marked as ${newStatus}`);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!window.confirm('Are you sure you want to delete this application?')) return;
-    try {
-      const response = await fetch(`/api/applications/${id}`, {
-        method: 'DELETE'
-      });
-      if (response.ok) {
-        toast.success('Application deleted');
-        setApplications(apps => apps.filter(app => app.id !== id));
-      } else {
-        throw new Error('Delete failed');
-      }
-    } catch (error: any) {
-      toast.error('Delete failed: ' + error.message);
-    }
+    const stored = JSON.parse(localStorage.getItem('applications') || '[]');
+    const updated = stored.filter((app: any) => app.id !== id);
+    localStorage.setItem('applications', JSON.stringify(updated));
+    setApplications(updated.sort((a: any, b: any) => b.createdAt - a.createdAt));
+    toast.success('Application deleted');
   };
 
-  const handleLogout = async () => {
-    await fetch('/api/logout', { method: 'POST' });
+  const handleLogout = () => {
     sessionStorage.removeItem('adminAuth');
     setIsAuthenticated(false);
     toast('Logged out', { icon: '👋' });
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
-      });
-      if (response.ok) {
-        sessionStorage.setItem('adminAuth', 'true');
-        setIsAuthenticated(true);
-        toast.success('Logged in successfully!');
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Invalid password');
-      }
-    } catch (error) {
-      toast.error('Network error during login');
+    const correctPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
+    if (password === correctPassword) {
+      sessionStorage.setItem('adminAuth', 'true');
+      setIsAuthenticated(true);
+      toast.success('Logged in successfully!');
+    } else {
+      toast.error('Invalid password');
     }
   };
 

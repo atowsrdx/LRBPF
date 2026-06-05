@@ -21,12 +21,15 @@ export default function ApplicationForm() {
     setIsSubmitting(true);
     
     try {
-      const res = await fetch('/api/applications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      if (!res.ok) throw new Error('Submission failed');
+      const currentApps = JSON.parse(localStorage.getItem('applications') || '[]');
+      const newApp = {
+        id: Date.now().toString(),
+        ...formData,
+        status: 'pending',
+        createdAt: Date.now()
+      };
+      currentApps.push(newApp);
+      localStorage.setItem('applications', JSON.stringify(currentApps));
       
       toast.success('Your application has been submitted successfully.');
       setFormData({

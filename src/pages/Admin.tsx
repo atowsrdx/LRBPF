@@ -29,23 +29,15 @@ export default function Admin() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
-      });
-      
-      if (response.ok) {
-        sessionStorage.setItem('adminAuth', 'true');
-        setIsAuthenticated(true);
-        toast.success('Logged in successfully!');
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Invalid password');
-      }
-    } catch (error) {
-      toast.error('Network error during login');
+    // WARNING: Testing password client-side, acceptable for simple statically hosted prototypes.
+    const correctPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
+    
+    if (password === correctPassword) {
+      sessionStorage.setItem('adminAuth', 'true');
+      setIsAuthenticated(true);
+      toast.success('Logged in successfully!');
+    } else {
+      toast.error('Invalid password');
     }
   };
 
@@ -134,8 +126,7 @@ export default function Admin() {
     }
   };
 
-  const handleLogout = async () => {
-    await fetch('/api/logout', { method: 'POST' });
+  const handleLogout = () => {
     sessionStorage.removeItem('adminAuth');
     setIsAuthenticated(false);
     toast('Logged out', { icon: '👋' });

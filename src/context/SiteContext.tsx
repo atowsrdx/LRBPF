@@ -14,38 +14,28 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/config')
-      .then(res => res.json())
-      .then(data => {
-        if (Object.keys(data).length > 0) {
-          setContent({
-            ...defaultSiteContent,
-            ...data,
-            stories: data.stories || defaultSiteContent.stories,
-            process: data.process || defaultSiteContent.process,
-          } as SiteContent);
-        } else {
-          setContent(defaultSiteContent);
-        }
-        setIsLoading(false);
-      })
-      .catch(error => {
-        console.error("Failed to fetch initial config", error);
+    try {
+      const stored = localStorage.getItem('siteConfig');
+      if (stored) {
+        const data = JSON.parse(stored);
+        setContent({
+          ...defaultSiteContent,
+          ...data,
+          stories: data.stories || defaultSiteContent.stories,
+          process: data.process || defaultSiteContent.process,
+        } as SiteContent);
+      } else {
         setContent(defaultSiteContent);
-        setIsLoading(false);
-      });
+      }
+    } catch(err) {
+      setContent(defaultSiteContent);
+    }
+    setIsLoading(false);
   }, []);
 
   const updateContent = async (newContent: SiteContent) => {
     try {
-      const response = await fetch('/api/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newContent)
-      });
-      if (!response.ok) {
-        throw new Error('Failed to save config: Unauthorized or server error');
-      }
+      localStorage.setItem('siteConfig', JSON.stringify(newContent));
       setContent(newContent);
     } catch (error) {
       console.error(error);
